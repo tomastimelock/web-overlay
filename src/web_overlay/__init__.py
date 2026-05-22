@@ -11,7 +11,7 @@ from __future__ import annotations
 
 # MIT License — Copyright 2026 Trollfabriken AITrix AB
 
-__version__ = "0.1.3"
+__version__ = "0.1.5"
 
 from web_overlay.config import RenderConfig
 from web_overlay.models import OverlayResult

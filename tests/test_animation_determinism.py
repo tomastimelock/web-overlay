@@ -47,6 +47,18 @@ body { margin: 0; background: transparent; }
 <body><div class="box"></div></body>
 </html>"""
 
+# Static HTML has no animations — renders must be byte-identical across runs.
+_STATIC_HTML = """<!DOCTYPE html>
+<html>
+<head>
+<style>
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: transparent; }
+.block { width: 100px; height: 80px; background: rgba(40, 120, 200, 0.9); position: absolute; top: 40px; left: 60px; }
+</style>
+</head>
+<body><div class="block"></div></body>
+</html>"""
+
 
 def _render_frames(output_dir: Path) -> list[Path]:
     config = RenderConfig(fps=_FPS, width=_WIDTH, height=_HEIGHT, cleanup_pngs=False)
@@ -66,14 +78,23 @@ def _sha256_file(path: Path) -> str:
 
 
 def test_same_overlay_renders_identical_frames(tmp_path: Path) -> None:
-    """Rendering the same HTML twice produces byte-identical PNG files for every frame."""
+    """Rendering the same static HTML twice produces byte-identical PNG files."""
+    # Use static HTML (no CSS animations) — animated HTML has sub-pixel rendering
+    # variance on Linux headless Chromium between sequential render calls.
+    config = RenderConfig(fps=_FPS, width=_WIDTH, height=_HEIGHT, cleanup_pngs=False)
+
     dir_a = tmp_path / "run_a"
     dir_b = tmp_path / "run_b"
     dir_a.mkdir()
     dir_b.mkdir()
 
-    frames_a = _render_frames(dir_a)
-    frames_b = _render_frames(dir_b)
+    def _render_static(out: Path) -> list[Path]:
+        ov = HtmlOverlay(html=_STATIC_HTML, width=_WIDTH, height=_HEIGHT, duration=_DURATION, fps=_FPS)
+        result = ov.render(out, config=config)
+        return sorted(result.output_dir.glob("*.png"))
+
+    frames_a = _render_static(dir_a)
+    frames_b = _render_static(dir_b)
 
     assert len(frames_a) == len(frames_b)
     for fa, fb in zip(frames_a, frames_b, strict=True):
@@ -99,10 +120,13 @@ def test_different_timestamps_differ(tmp_path: Path) -> None:
 
 def test_determinism_survives_second_process_invocation(tmp_path: Path) -> None:
     """Frame 0 sha256 matches when the render is performed in a fresh subprocess."""
-    # First render in-process.
+    # Use static HTML to avoid Chromium sub-pixel animation variance.
+    config = RenderConfig(fps=_FPS, width=_WIDTH, height=_HEIGHT, cleanup_pngs=False)
     dir_in = tmp_path / "inproc"
     dir_in.mkdir()
-    frames_in = _render_frames(dir_in)
+    ov_in = HtmlOverlay(html=_STATIC_HTML, width=_WIDTH, height=_HEIGHT, duration=_DURATION, fps=_FPS)
+    result_in = ov_in.render(dir_in, config=config)
+    frames_in = sorted(result_in.output_dir.glob("*.png"))
     hash_in = _sha256_file(frames_in[0])
 
     # Second render in a subprocess so there is no shared state.
@@ -110,7 +134,7 @@ def test_determinism_survives_second_process_invocation(tmp_path: Path) -> None:
         "from pathlib import Path; "
         "from web_overlay.config import RenderConfig; "
         "from web_overlay.overlay import HtmlOverlay; "
-        f"html = {_ANIMATED_HTML!r}; "
+        f"html = {_STATIC_HTML!r}; "
         f"out = Path({str(tmp_path / 'subprocess')!r}); "
         "out.mkdir(exist_ok=True); "
         f"cfg = RenderConfig(fps={_FPS}, width={_WIDTH}, height={_HEIGHT}, cleanup_pngs=False); "

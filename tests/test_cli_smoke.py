@@ -74,9 +74,11 @@ def test_setup_help() -> None:
 
 def test_version_flag() -> None:
     """web-overlay --version exits with code 0 and prints the version string."""
+    import web_overlay
+
     r = run_cli("--version")
     assert r.returncode == 0
-    assert "0.1.0" in r.stdout
+    assert web_overlay.__version__ in r.stdout
 
 
 def test_no_subcommand_exits_nonzero() -> None:

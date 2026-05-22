@@ -89,7 +89,9 @@ def test_same_overlay_renders_identical_frames(tmp_path: Path) -> None:
     dir_b.mkdir()
 
     def _render_static(out: Path) -> list[Path]:
-        ov = HtmlOverlay(html=_STATIC_HTML, width=_WIDTH, height=_HEIGHT, duration=_DURATION, fps=_FPS)
+        ov = HtmlOverlay(
+            html=_STATIC_HTML, width=_WIDTH, height=_HEIGHT, duration=_DURATION, fps=_FPS
+        )
         result = ov.render(out, config=config)
         return sorted(result.output_dir.glob("*.png"))
 
@@ -124,7 +126,9 @@ def test_determinism_survives_second_process_invocation(tmp_path: Path) -> None:
     config = RenderConfig(fps=_FPS, width=_WIDTH, height=_HEIGHT, cleanup_pngs=False)
     dir_in = tmp_path / "inproc"
     dir_in.mkdir()
-    ov_in = HtmlOverlay(html=_STATIC_HTML, width=_WIDTH, height=_HEIGHT, duration=_DURATION, fps=_FPS)
+    ov_in = HtmlOverlay(
+        html=_STATIC_HTML, width=_WIDTH, height=_HEIGHT, duration=_DURATION, fps=_FPS
+    )
     result_in = ov_in.render(dir_in, config=config)
     frames_in = sorted(result_in.output_dir.glob("*.png"))
     hash_in = _sha256_file(frames_in[0])
